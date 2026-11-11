@@ -105,6 +105,27 @@ RSpec.describe 'Translating value object errors through I18n' do
     end
   end
 
+  context 'with errors on base' do
+    class I18nBaseValue < ActiveRecordValueObjects::AbstractValue
+      validate { errors.add(:base, 'is bad') }
+      validate { errors.add(:base, :invalid) }
+
+      attribute :name, Types::String.optional
+    end
+
+    class I18nBaseRecord < I18nRecordBase
+      value_attribute :values, ActiveRecordValueObjects::AbstractValue::Types::Array.of(I18nBaseValue).optional
+    end
+
+    it 'keeps their messages on array elements' do
+      record = I18nBaseRecord.new
+      record.values = [I18nBaseValue.new(name: nil)]
+      record.validate
+
+      expect(record.errors.messages_for(:'values/0/base')).to eq ['is bad', 'is invalid']
+    end
+  end
+
   context 'with a global translation for the type' do
     it 'uses it' do
       store(errors: { messages: { blank: 'is required' } })
