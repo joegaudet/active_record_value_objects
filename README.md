@@ -28,6 +28,61 @@ Values are immutable by default, but you can easily make copies of them with cha
 new_address = Address.new(street: '123 Main St', city: 'Springfield', state: 'IL', zip: '62701')
   .copy_with(city: 'Chicago')
 ```
+## Translating validation errors
+
+Validation errors on a value object are copied onto the record under a path such as
+`address/city`, or `addresses/0/city` for an array attribute. They go through Rails I18n,
+so you translate them the same way as any other ActiveRecord error. Without translations
+you get the usual English messages.
+
+Messages are looked up in this order:
+
+1. The record, keyed by the path: `activerecord.errors.models.user.attributes.address/city.blank`.
+   Array elements are looked up by index first (`addresses/0/city`), then without it (`addresses/city`).
+2. The value object (`activemodel.errors.models.address.attributes.city.blank`, then
+   `activemodel.errors.models.address.blank`).
+3. The type: `activemodel.errors.messages.blank`, then `errors.messages.blank`.
+
+```yaml
+# config/locales/fr.yml
+fr:
+  errors:
+    messages:
+      blank: "doit être rempli(e)"
+  activerecord:
+    errors:
+      models:
+        user:
+          attributes:
+            "address/city":
+              blank: "indiquez une ville"
+            "addresses/city":
+              blank: "chaque adresse a besoin d'une ville"
+```
+
+As with Rails' own attributes, a translation keyed to the record (step 1) also replaces a
+custom `message:` given to the validator. Steps 2 and 3 never do. Options such as `count`
+are passed along, so `%{count}` works in `too_long` and the other length messages.
+
+### gettext
+
+To use gettext, plug it in as the I18n backend with
+[gettext_i18n_rails](https://github.com/grosser/gettext_i18n_rails). Its backend serves the
+lookups above from your `.po` files. A msgid can be the I18n key, such as
+`activerecord.errors.models.user.attributes.address/city.blank`, or the English message
+itself, such as `can't be blank`. The English message works because it is passed as the
+lookup's default.
+
+```ruby
+# Gemfile
+gem 'gettext_i18n_rails'
+
+# config/initializers/fast_gettext.rb
+FastGettext.add_text_domain 'app', path: 'locale', type: :po
+FastGettext.default_available_locales = %w[en fr]
+FastGettext.default_text_domain = 'app'
+```
+
 ## Installation
 
 Add this line to your application's Gemfile:
