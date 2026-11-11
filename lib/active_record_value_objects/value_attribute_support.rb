@@ -35,6 +35,12 @@ module ActiveRecordValueObjects
         @value_class = @value_class.right
       end
 
+      # Types::Array.of(X) arrives as a dry-types array; treat it like the [X] literal
+      if @value_class.respond_to?(:member)
+        @is_array = true
+        @value_class = @value_class.member
+      end
+
       unless @is_hash || @value_class < ActiveRecordValueObjects::AbstractValue
         raise ArgumentError.new("You tried to define value accessors for #{value_name} using #{@value_class} which does not descend from Values::Base")
       end
@@ -157,7 +163,7 @@ module ActiveRecordValueObjects
         attr_key = "__value_attribute_#{value_name}"
         instance_attr_key = "@#{attr_key}"
 
-        validates_with ::Values::Validator if self.respond_to? :validates_with
+        validates_with ::ActiveRecordValueObjects::Validator if self.respond_to? :validates_with
 
         define_method(attr_key) do
 

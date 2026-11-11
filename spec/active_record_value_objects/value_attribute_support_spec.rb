@@ -21,6 +21,7 @@ RSpec.describe ActiveRecordValueObjects::ValueAttributeSupport do
   # super on active record accessor models, so we need
   # to provide those.
   class PoroBase
+    include ActiveModel::Validations
     include ActiveRecordValueObjects::ValueAttributeSupport
 
     attr_accessor :test, :test_foos
@@ -46,12 +47,12 @@ RSpec.describe ActiveRecordValueObjects::ValueAttributeSupport do
 
   class Poro < PoroBase
     value_attribute :foo, AValueObject.optional
-    value_attribute :foos, ActiveRecordValueObjects::AbstractValue::Types::Array.of(AValidatedObject).optional
+    value_attribute :foos, ActiveRecordValueObjects::AbstractValue::Types::Array.of(AValueObject).optional
   end
 
   class ArrayPoro < PoroBase
     include Dry.Types()
-    value_attribute :foo, ActiveRecordValueObjects::AbstractValue::Types::Array.of(AValidatedObject).optional
+    value_attribute :foo, ActiveRecordValueObjects::AbstractValue::Types::Array.of(AValueObject).optional
   end
 
   class ValidateablePoro < PoroBase
@@ -143,13 +144,12 @@ RSpec.describe ActiveRecordValueObjects::ValueAttributeSupport do
     poro.foo = AValidatedObject.new
     poro.foos = [AValidatedObject.new]
 
-    refute poro.validate
-    assert poro.errors.find { |e| e.attribute == :'foo/foo' }.present?, "It should have an error on the foo attribute of the foo object"
-    assert poro.errors.find { |e| e.attribute == :'foos/0/foo' }.present?, "It should have an error on the foo attribute of the first object in the foos array"
+    expect(poro.validate).to be false
+    expect(poro.errors.map(&:attribute)).to include(:'foo/foo', :'foos/0/foo')
 
     poro.foo = AValidatedObject.new(foo: 'hi')
     poro.foos = [AValidatedObject.new(foo: 'hi')]
 
-    assert poro.validate
+    expect(poro.validate).to be true
   end
 end
