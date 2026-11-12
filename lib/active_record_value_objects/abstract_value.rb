@@ -4,6 +4,9 @@ module ActiveRecordValueObjects
   class AbstractValue < ::Dry::Struct
     include ActiveModel::Validations
 
+    # The record (or value) this value was read from; set by value_attribute readers
+    attr_accessor :parent
+
     module Types
       include Dry.Types()
     end
